@@ -36,8 +36,8 @@ typedef struct IPHeader{
     unsigned int source_ip;
     unsigned int destination_ip;
 }IPHeader;
-#define IP_VER(ver) ver>>4
-#define IP_HEADER_LEN(len) len&0x0f
+#define IP_VER(ver) ver&0x0f
+#define IP_HEADER_LEN(len) len>>4
 
 typedef struct EthernetFrameHeader{
     unsigned char destination_mac[6];

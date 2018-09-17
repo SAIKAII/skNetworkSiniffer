@@ -1,13 +1,17 @@
 #include <sys/socket.h>
 #include <sys/select.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <iostream>
 #include <errno.h>
 #include <signal.h>
-#include <memory.h>
+#include <memory>
 #include <linux/if_ether.h> // 为了socket第三个参数的ETH_P_ALL
 #include <sys/types.h>
 #include <map>
+#include <string.h>
 #include <string>
+#include <unistd.h>
 
 #include "network_packet.hpp"
 
@@ -23,7 +27,7 @@
 #define SNDPACKET false
 
 typedef struct rc_option{
-    unsigned int ip;  //inet_addr之后的ip
+    in_addr ip;  //inet_aton之后的ip
     unsigned short port;  //htons之后的端口号
 }rc_option;
 
@@ -40,12 +44,12 @@ void show_option(){
 }
 
 // 解析参数
-void resolve_option(int num, auto &option /*char *option[] */, rc_option &opt){
+void resolve_option(int num, auto option /*char *option[] */, rc_option &opt){
     for(int i = 0; i < num; ++i){
         switch(option[i][1]){
             case 'i':
                 ++i;
-                opt.ip = static_cast<unsigned int>(inet_addr(option[i]));
+                inet_aton(option[i], &opt.ip);
                 break;
             case 'p':
                 unsigned short port;
@@ -76,13 +80,14 @@ bool command_interpreter(const int &socketfd){
 }
 
 bool throw_away_the_packet(const auto buffer, rc_option &opt, bool recv){
-    bool throw_ip = throw_port = true;
+    bool throw_ip, throw_port;
+    throw_ip = throw_port = true;
     const auto buffer_ip = buffer + 6 + 6 + 2;
-    const auto buffer_port = buffer_ip + static_cast<unsigned short>(IP_HEADER_LEN(buffer_ip->ver_and_header_len)) << 4;
-    unsigned int ip = true == recv ? *static_cast<unsigned int*>(RECV_REMOTE_IP(buffer_ip)) : *static_cast<unsigned int*>(SEND_REMOTE_IP(buffer_ip));
-    unsigned short port = true == recv ? *static_cast<unsigned short*>(RECV_HOST_PORT(buffer_port)) : *static_cast<unsigned short>(SEND_HOST_PORT(buffer_port));
+    const auto buffer_port = buffer_ip + (static_cast<unsigned short>(IP_HEADER_LEN(reinterpret_cast<IPHeader*>(buffer_ip)->ver_and_header_len))<<2);
+    unsigned int ip = true == recv ? *reinterpret_cast<unsigned int*>(RECV_REMOTE_IP(buffer_ip)) : *reinterpret_cast<unsigned int*>(SEND_REMOTE_IP(buffer_ip));
+    unsigned short port = true == recv ? *reinterpret_cast<unsigned short*>(RECV_HOST_PORT(buffer_port)) : *reinterpret_cast<unsigned short*>(SEND_HOST_PORT(buffer_port));
 
-    if(opt.ip == 0 || (opt.ip != 0 && opt.ip == ip)){
+    if(opt.ip.s_addr == 0 || (opt.ip.s_addr != 0 && opt.ip.s_addr == ip)){
         throw_ip = false;
     }
     if(opt.port == 0 || (opt.port != 0 && opt.port == port)){
@@ -92,6 +97,7 @@ bool throw_away_the_packet(const auto buffer, rc_option &opt, bool recv){
 }
 
 void recv_packet(const int &socketfd, auto &buffer){
+    int recv_size;
     recv_size = recv(socketfd, buffer.get(), MAX_PACKET, 0);
 
     if(recv_size <= 0){
@@ -102,16 +108,23 @@ void recv_packet(const int &socketfd, auto &buffer){
 }
 
 void process_packet(unsigned char *buffer, int size){
-    EthernetFrameHeader *efh = buffer;
+    EthernetFrameHeader *efh = reinterpret_cast<EthernetFrameHeader *>(buffer);
     std::cout << "EthernetFrame : " << std::endl;
     std::cout << "D_MAC : " << efh->destination_mac << "S_MAC : " << efh->source_mac << std::endl;
 
-    IPHeader *iph = buffer + 6 + 6 + 2;
-    std::cout << "IP : " << std::endl;recv
-    std::cout << "TTL : " << static_cast<unsigned short>(iph->ttl)
+    IPHeader *iph = reinterpret_cast<IPHeader *>(buffer + 6 + 6 + 2);
+    std::cout << "IP : " << std::endl;
+    std::cout << "TTL : " << static_cast<unsigned short>(iph->ttl);
     unsigned short prot = static_cast<unsigned short>(iph->protocol);
     std::cout << "\tprotocol : " << kProtocol[prot] << std::endl;
-    std::cout << "source ip : " << 
+    in_addr iph_ip;
+    iph_ip.s_addr = iph->source_ip;
+    std::cout << "source ip : " << inet_ntoa(iph_ip) << std::endl;
+    iph_ip.s_addr = iph->destination_ip;
+    std::cout << "destination ip : " << inet_ntoa(iph_ip) << std::endl;
+    std::cout << std::endl;
+
+    // ...
 }
 
 int main(int argc, char *argv[]){
@@ -125,8 +138,8 @@ int main(int argc, char *argv[]){
     init();
 
     rc_option opt;
-    memset(opt, 0, sizeof(rc_option));
-    resolve_option(argc-1, &option[1], opt);
+    memset((void *)&opt, 0, sizeof(rc_option));
+    resolve_option(argc-1, &argv[1], opt);
 
     int socketfd;
 
@@ -144,16 +157,17 @@ int main(int argc, char *argv[]){
         exit(1);
     }
 
-    int recv_size;
     FD_ZERO(&fd_read);
     // FD_ZERO(&fd_write);
+    int res;
     while(1){
+        res = -1;
         FD_SET(0, &fd_read);
         FD_SET(socketfd, &fd_read);
         // FD_SET(socketfd, &fd_write);
 
         // res = select(socketfd+1, &fd_read, &fd_write, NULL, NULL);
-        res = select(socket+1, &fd_read, NULL, NULL, NULL);
+        res = select(socketfd+1, &fd_read, NULL, NULL, NULL);
         if(res < 0){
             close(socketfd);
             if(errno != EINTR)
@@ -171,7 +185,7 @@ int main(int argc, char *argv[]){
                     continue;
 
                 // 处理数据包
-                process_packet(buffer.get(), recv_size);
+                process_packet(buffer.get(), res);
             }
             // if(FD_ISSET(socketfd, &fd_write)){
             //     recv_packet(socketfd, buffer, from);
