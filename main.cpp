@@ -12,6 +12,7 @@
 #include <string.h>
 #include <string>
 #include <unistd.h>
+#include <cstdlib>
 
 #include "network_packet.hpp"
 
@@ -96,6 +97,23 @@ bool throw_away_the_packet(const auto buffer, rc_option &opt, bool recv){
     return (throw_ip || throw_port);
 }
 
+// std::string mac_to_little_endian(const unsigned char (&v)[6]){
+//     std::string str_rnt;
+//     const unsigned char *mac = &v[5];
+//     char tmp[3];
+//
+//     for(int i = 0; i < 6; ++i){
+//         memset(tmp, 0, 3);
+//         itoa(*mac, tmp, 16);
+//         str_rnt += tmp;
+//         --mac;
+//         if(i != 5)
+//             str_rnt += ':';
+//     }
+//
+//     return str_rnt;
+// }
+
 void recv_packet(const int &socketfd, auto &buffer){
     int recv_size;
     recv_size = recv(socketfd, buffer.get(), MAX_PACKET, 0);
@@ -108,12 +126,12 @@ void recv_packet(const int &socketfd, auto &buffer){
 }
 
 void process_packet(unsigned char *buffer, int size){
-    EthernetFrameHeader *efh = reinterpret_cast<EthernetFrameHeader *>(buffer);
-    std::cout << "EthernetFrame : " << std::endl;
-    std::cout << "D_MAC : " << efh->destination_mac << "S_MAC : " << efh->source_mac << std::endl;
+    //EthernetFrameHeader *efh = reinterpret_cast<EthernetFrameHeader *>(buffer);
+    //std::cout << "----------EthernetFrame : " << std::endl;
+    //std::cout << "D_MAC : " << mac_to_little_endian(efh->destination_mac) << "S_MAC : " << mac_to_little_endian(efh->source_mac) << std::endl;
 
     IPHeader *iph = reinterpret_cast<IPHeader *>(buffer + 6 + 6 + 2);
-    std::cout << "IP : " << std::endl;
+    std::cout << "----------IP : " << std::endl;
     std::cout << "TTL : " << static_cast<unsigned short>(iph->ttl);
     unsigned short prot = static_cast<unsigned short>(iph->protocol);
     std::cout << "\tprotocol : " << kProtocol[prot] << std::endl;
@@ -181,7 +199,7 @@ int main(int argc, char *argv[]){
             }else if(FD_ISSET(socketfd, &fd_read)){
                 recv_packet(socketfd, buffer);
 
-                if(throw_away_the_packet(buffer.get(), opt, RECVPACKET))    // 待改
+                if(throw_away_the_packet(buffer.get(), opt, RECVPACKET))
                     continue;
 
                 // 处理数据包
