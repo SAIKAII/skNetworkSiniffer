@@ -21,12 +21,12 @@ std::string switch_to_hex(const char c){
     return std::string(kHex[front]) + std::string(kHex[behind]);
 }
 
-bool throw_away_the_packet(const auto buffer, rc_option &opt, bool recv){
+bool throw_away_the_packet(const unsigned char *buffer, rc_option &opt, bool recv){
     bool throw_ip, throw_port;
     throw_ip = throw_port = true;
-    const IPHeader *buffer_ip = buffer + 6 + 6 + 2;
-    const TCPHeader *buffer_tcp = buffer + 6 + 6 + 2
-                + (static_cast<unsigned short>(IP_HEADER_LEN(buffer_ip->ver_and_header_len))<<2);
+    const IPHeader *buffer_ip = reinterpret_cast<const IPHeader *>(buffer + 6 + 6 + 2);
+    const TCPHeader *buffer_tcp = reinterpret_cast<const TCPHeader *>(buffer + 6 + 6 + 2
+                + (static_cast<unsigned short>(IP_HEADER_LEN(buffer_ip->ver_and_header_len))<<2));
     unsigned int ip = true == recv ? buffer_ip->source_ip : buffer_ip->destination_ip;
     unsigned short port = true == recv ? buffer_tcp->destination_port : buffer_tcp->source_port;
 

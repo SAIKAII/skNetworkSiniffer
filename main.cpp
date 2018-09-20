@@ -17,12 +17,6 @@
 
 #define MAX_PACKET 65536
 
-#define RECV_REMOTE_IP(buffer) (buffer + 12)
-#define SEND_REMOTE_IP(buffer) (buffer + 16)
-
-#define RECV_HOST_PORT(buffer) (buffer + 2)
-#define SEND_HOST_PORT(buffer) (buffer)
-
 #define RECVPACKET true
 #define SNDPACKET false
 
