@@ -1,6 +1,5 @@
 #include <sys/socket.h>
 #include <sys/select.h>
-#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <iostream>
 #include <errno.h>
@@ -10,11 +9,11 @@
 #include <sys/types.h>
 #include <map>
 #include <string.h>
-#include <string>
 #include <unistd.h>
 #include <cstdlib>
 
 #include "network_packet.hpp"
+#include "util.hpp"
 
 #define MAX_PACKET 65536
 
@@ -26,11 +25,6 @@
 
 #define RECVPACKET true
 #define SNDPACKET false
-
-typedef struct rc_option{
-    in_addr ip;  //inet_aton之后的ip
-    unsigned short port;  //htons之后的端口号
-}rc_option;
 
 static std::map<unsigned short, std::string> kProtocol;
 
@@ -80,40 +74,6 @@ bool command_interpreter(const int &socketfd){
     return false;
 }
 
-bool throw_away_the_packet(const auto buffer, rc_option &opt, bool recv){
-    bool throw_ip, throw_port;
-    throw_ip = throw_port = true;
-    const auto buffer_ip = buffer + 6 + 6 + 2;
-    const auto buffer_port = buffer_ip + (static_cast<unsigned short>(IP_HEADER_LEN(reinterpret_cast<IPHeader*>(buffer_ip)->ver_and_header_len))<<2);
-    unsigned int ip = true == recv ? *reinterpret_cast<unsigned int*>(RECV_REMOTE_IP(buffer_ip)) : *reinterpret_cast<unsigned int*>(SEND_REMOTE_IP(buffer_ip));
-    unsigned short port = true == recv ? *reinterpret_cast<unsigned short*>(RECV_HOST_PORT(buffer_port)) : *reinterpret_cast<unsigned short*>(SEND_HOST_PORT(buffer_port));
-
-    if(opt.ip.s_addr == 0 || (opt.ip.s_addr != 0 && opt.ip.s_addr == ip)){
-        throw_ip = false;
-    }
-    if(opt.port == 0 || (opt.port != 0 && opt.port == port)){
-        throw_port = false;
-    }
-    return (throw_ip || throw_port);
-}
-
-// std::string mac_to_little_endian(const unsigned char (&v)[6]){
-//     std::string str_rnt;
-//     const unsigned char *mac = &v[5];
-//     char tmp[3];
-//
-//     for(int i = 0; i < 6; ++i){
-//         memset(tmp, 0, 3);
-//         itoa(*mac, tmp, 16);
-//         str_rnt += tmp;
-//         --mac;
-//         if(i != 5)
-//             str_rnt += ':';
-//     }
-//
-//     return str_rnt;
-// }
-
 void recv_packet(const int &socketfd, auto &buffer){
     int recv_size;
     recv_size = recv(socketfd, buffer.get(), MAX_PACKET, 0);
@@ -126,9 +86,9 @@ void recv_packet(const int &socketfd, auto &buffer){
 }
 
 void process_packet(unsigned char *buffer, int size){
-    //EthernetFrameHeader *efh = reinterpret_cast<EthernetFrameHeader *>(buffer);
-    //std::cout << "----------EthernetFrame : " << std::endl;
-    //std::cout << "D_MAC : " << mac_to_little_endian(efh->destination_mac) << "S_MAC : " << mac_to_little_endian(efh->source_mac) << std::endl;
+    EthernetFrameHeader *efh = reinterpret_cast<EthernetFrameHeader *>(buffer);
+    std::cout << "----------EthernetFrame : " << std::endl;
+    std::cout << "D_MAC : " << mac_to_little_endian(efh->destination_mac) << "S_MAC : " << mac_to_little_endian(efh->source_mac) << std::endl;
 
     IPHeader *iph = reinterpret_cast<IPHeader *>(buffer + 6 + 6 + 2);
     std::cout << "----------IP : " << std::endl;
