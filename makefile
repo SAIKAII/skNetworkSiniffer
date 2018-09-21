@@ -9,4 +9,4 @@ util.o: util.cpp network_packet.hpp util.hpp
 
 
 clean:
-	rm *.o
+	rm *.o sniffer

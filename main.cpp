@@ -82,7 +82,7 @@ void recv_packet(const int &socketfd, auto &buffer){
 void process_packet(unsigned char *buffer, int size){
     EthernetFrameHeader *efh = reinterpret_cast<EthernetFrameHeader *>(buffer);
     std::cout << "----------EthernetFrame : " << std::endl;
-    std::cout << "D_MAC : " << mac_to_little_endian(efh->destination_mac) << "S_MAC : " << mac_to_little_endian(efh->source_mac) << std::endl;
+    std::cout << "D_MAC : " << mac_to_little_endian(efh->destination_mac) << " S_MAC : " << mac_to_little_endian(efh->source_mac) << std::endl;
 
     IPHeader *iph = reinterpret_cast<IPHeader *>(buffer + 6 + 6 + 2);
     std::cout << "----------IP : " << std::endl;

@@ -3,11 +3,11 @@
 
 std::string mac_to_little_endian(const unsigned char (&v)[6]){
     std::string str_rtn;
-    const unsigned char *mac = &v[5];
+    const unsigned char *mac = &v[0];
 
     for(int i = 0; i < 6; ++i){
         str_rtn += switch_to_hex(*mac);
-        --mac;
+        ++mac;
         if(i != 5)
             str_rtn += ':';
     }
@@ -16,7 +16,7 @@ std::string mac_to_little_endian(const unsigned char (&v)[6]){
 }
 
 std::string switch_to_hex(const char c){
-    size_t front = (size_t)(c >> 4);
+    size_t front = (size_t)((c >> 4) & 0x0f);
     size_t behind = (size_t)(c & 0x0f);
     return std::string(kHex[front]) + std::string(kHex[behind]);
 }
