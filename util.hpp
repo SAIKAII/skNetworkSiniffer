@@ -4,6 +4,9 @@
 #include <string>
 #include <arpa/inet.h>
 #include <cstddef>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
 
 typedef struct rc_option{
     in_addr ip;  //inet_aton之后的ip

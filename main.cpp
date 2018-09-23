@@ -68,15 +68,16 @@ bool command_interpreter(const int &socketfd){
     return false;
 }
 
-void recv_packet(const int &socketfd, auto &buffer){
+void recv_packet(const int &socketfd, auto &buffer, size_t &size){
     int recv_size;
-    recv_size = recv(socketfd, buffer.get(), MAX_PACKET, 0);
+    recv_size = recvfrom(socketfd, buffer.get(), MAX_PACKET, 0, 0, 0);
 
     if(recv_size <= 0){
         close(socketfd);
         perror("recvfrom(): ");
         exit(1);
     }
+    size = recv_size;
 }
 
 void process_packet(unsigned char *buffer, int size){
@@ -84,16 +85,19 @@ void process_packet(unsigned char *buffer, int size){
     std::cout << "----------EthernetFrame : " << std::endl;
     std::cout << "D_MAC : " << mac_to_little_endian(efh->destination_mac) << " S_MAC : " << mac_to_little_endian(efh->source_mac) << std::endl;
 
-    IPHeader *iph = reinterpret_cast<IPHeader *>(buffer + 6 + 6 + 2);
+    iphdr *iph = reinterpret_cast<iphdr *>(buffer + 6 + 6 + 2);
     std::cout << "----------IP : " << std::endl;
     std::cout << "TTL : " << static_cast<unsigned short>(iph->ttl);
     unsigned short prot = static_cast<unsigned short>(iph->protocol);
     std::cout << "\tprotocol : " << kProtocol[prot] << std::endl;
-    in_addr iph_ip;
-    iph_ip.s_addr = iph->source_ip;
-    std::cout << "source ip : " << inet_ntoa(iph_ip) << std::endl;
-    iph_ip.s_addr = iph->destination_ip;
-    std::cout << "destination ip : " << inet_ntoa(iph_ip) << std::endl;
+    sockaddr_in source;
+    sockaddr_in destination;
+    memset((void *)&source, 0, sizeof(source));
+    source.sin_addr.s_addr = iph->saddr;
+    memset((void *)&destination, 0, sizeof(destination));
+    destination.sin_addr.s_addr = iph->daddr;
+    std::cout << "source ip : " << inet_ntoa(source.sin_addr) << std::endl;
+    std::cout << "destination ip : " << inet_ntoa(destination.sin_addr) << std::endl;
     std::cout << std::endl;
 
     // ...
@@ -124,7 +128,7 @@ int main(int argc, char *argv[]){
 
     fd_set fd_read, fd_write;
     std::shared_ptr<unsigned char> buffer(new unsigned char[MAX_PACKET]);
-    if(buffer == NULL){
+    if(NULL == buffer){
         perror("std::shared_ptr error: ");
         exit(1);
     }
@@ -132,6 +136,7 @@ int main(int argc, char *argv[]){
     FD_ZERO(&fd_read);
     // FD_ZERO(&fd_write);
     int res;
+    size_t size;
     while(1){
         res = -1;
         FD_SET(0, &fd_read);
@@ -150,23 +155,24 @@ int main(int argc, char *argv[]){
                 // 标准输入可读，调用command_interpreter处理程序。暂时只支持'quit'命令
                 if(command_interpreter(socketfd))
                     break;
-            }else if(FD_ISSET(socketfd, &fd_read)){
-                recv_packet(socketfd, buffer);
+            }
+            if(FD_ISSET(socketfd, &fd_read)){
+                recv_packet(socketfd, buffer, size);
 
                 if(throw_away_the_packet(buffer.get(), opt, RECVPACKET))
                     continue;
 
                 // 处理数据包
-                process_packet(buffer.get(), res);
+                process_packet(buffer.get(), size);
             }
-            // if(FD_ISSET(socketfd, &fd_write)){
-            //     recv_packet(socketfd, buffer, from);
-            //
-            //     if(throw_away_the_packet(from, opt))
-            //         continue;
-            //
-            //
-            // }
+            if(FD_ISSET(socketfd, &fd_write)){
+                recv_packet(socketfd, buffer, size);
+
+                if(throw_away_the_packet(buffer.get(), opt, SNDPACKET))
+                    continue;
+
+                process_packet(buffer.get(), size);
+            }
         }
     }
 
