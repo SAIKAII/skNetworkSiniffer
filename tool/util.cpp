@@ -1,5 +1,14 @@
 #include "util.hpp"
-#include "network_packet.hpp"
+
+std::map<unsigned short, std::string> kProtocol;
+
+void init(){
+    kProtocol[1] = "ICMP";
+    kProtocol[2] = "IGMP";
+    kProtocol[4] = "IP";
+    kProtocol[6] = "TCP";
+    kProtocol[17] = "UDP";
+}
 
 std::string mac_to_little_endian(const unsigned char (&v)[6]){
     std::string str_rtn;
@@ -37,4 +46,33 @@ bool throw_away_the_packet(const unsigned char *buffer, rc_option &opt, bool rec
         throw_port = false;
     }
     return (throw_ip || throw_port);
+}
+
+SnifferEth *judge_protocol_and_return_obj(unsigned char *buffer){
+    // 获取网络层使用的协议
+    unsigned short prot = SnifferEth(buffer).get_upper_level_protocol();
+    SnifferEth *polymorphism = nullptr;
+
+    switch (prot) {
+        case ETH_P_IP:  // 这个定义在linux/if_ether.h文件中
+            prot = SnifferIP(buffer).get_upper_level_protocol();
+            break;
+        default:
+            prot = -1;
+    }
+    if(-1 == prot)
+        return nullptr;
+
+    switch (prot) {
+        case TCP:
+            polymorphism = new SnifferTCP(buffer);
+            break;
+        case UDP:
+            polymorphism = new SnifferUDP(buffer);
+            break;
+        default:
+            polymorphism = new SnifferIP(buffer);
+    }
+
+    return polymorphism;
 }

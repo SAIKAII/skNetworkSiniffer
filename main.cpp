@@ -7,25 +7,20 @@
 #include <memory>
 #include <linux/if_ether.h> // 为了socket第三个参数的ETH_P_ALL
 #include <sys/types.h>
-#include <map>
 #include <string.h>
 #include <unistd.h>
 #include <cstdlib>
 
-#include "network_packet.hpp"
-#include "util.hpp"
+#include "tool/util.hpp"
+#include "layer/sniffer_ip.hpp"
+#include "layer/sniffer_tcp.hpp"
+#include "layer/sniffer_eth.hpp"
+#include "layer/sniffer_udp.hpp"
 
 #define MAX_PACKET 65536
 
 #define RECVPACKET true
 #define SNDPACKET false
-
-static std::map<unsigned short, std::string> kProtocol;
-
-void init(){
-    kProtocol[6] = "TCP";
-    kProtocol[17] = "UDP";
-}
 
 // 显示可用参数
 void show_option(){
@@ -81,25 +76,14 @@ void recv_packet(const int &socketfd, auto &buffer, size_t &size){
 }
 
 void process_packet(unsigned char *buffer, int size){
-    EthernetFrameHeader *efh = reinterpret_cast<EthernetFrameHeader *>(buffer);
-    std::cout << "----------EthernetFrame : " << std::endl;
-    std::cout << "D_MAC : " << mac_to_little_endian(efh->destination_mac) << " S_MAC : " << mac_to_little_endian(efh->source_mac) << std::endl;
+    SnifferEth *prot_ptr = judge_protocol_and_return_obj(buffer);
 
-    iphdr *iph = reinterpret_cast<iphdr *>(buffer + 6 + 6 + 2);
-    std::cout << "----------IP : " << std::endl;
-    std::cout << "TTL : " << static_cast<unsigned short>(iph->ttl);
-    unsigned short prot = static_cast<unsigned short>(iph->protocol);
-    std::cout << "\tprotocol : " << kProtocol[prot] << std::endl;
-    sockaddr_in source;
-    sockaddr_in destination;
-    memset((void *)&source, 0, sizeof(source));
-    source.sin_addr.s_addr = iph->saddr;
-    memset((void *)&destination, 0, sizeof(destination));
-    destination.sin_addr.s_addr = iph->daddr;
-    std::cout << "source ip : " << inet_ntoa(source.sin_addr) << std::endl;
-    std::cout << "destination ip : " << inet_ntoa(destination.sin_addr) << std::endl;
-    std::cout << std::endl;
+    if(nullptr == prot_ptr){
+        std::cout << "wrong datagram!" << std::endl;
+        return;
+    }
 
+    prot_ptr->display_header();
     // ...
 }
 
