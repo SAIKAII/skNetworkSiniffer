@@ -31,7 +31,7 @@ std::string switch_to_hex(const char c){
 }
 
 bool throw_away_the_packet(const unsigned char *buffer, rc_option &opt, bool recv){
-    static std::unordered_map<unsigned short, bool> identification;
+    static std::unordered_map<unsigned short, repeated_filter> identification;
     bool throw_ip, throw_port;
     throw_ip = throw_port = true;
     const iphdr *buffer_ip = reinterpret_cast<const iphdr *>(buffer + 6 + 6 + 2);
@@ -40,15 +40,17 @@ bool throw_away_the_packet(const unsigned char *buffer, rc_option &opt, bool rec
     unsigned int ip = true == recv ? buffer_ip->saddr : buffer_ip->daddr;
     unsigned short port = true == recv ? buffer_tcp->dest : buffer_tcp->source;
     auto id_iter = identification.find(buffer_ip->id);
+    repeated_filter rf;
+    rf.mf = ntohs(buffer_ip->frag_off)&0x4;
+    rf.frag_off = buffer_ip->frag_off;  // 这里没有使用ntohs，以后要注意
 
     // 判断是否已经读取过这个数据包
     // ***尚未完善，一段时间后要自动删除元素，不然后续循环使用曾被用过的标识时会出错
-    // ***而且这种判断方法，其实对于真的有分片的数据包并不管用，后续需要修改
-    if(id_iter != identification.end() && false == id_iter->second){
+    if(id_iter != identification.end() && rf == id_iter->second){
         return true;
     }
 
-    identification[buffer_ip->id] = (ntohs(buffer_ip->frag_off)&0x4) > 0 ? true : false;
+    identification[buffer_ip->id] = rf;
     if(opt.ip.s_addr == 0 || (opt.ip.s_addr != 0 && opt.ip.s_addr == ip)){
         throw_ip = false;
     }
