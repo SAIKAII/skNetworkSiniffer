@@ -31,6 +31,7 @@ std::string switch_to_hex(const char c){
 }
 
 bool throw_away_the_packet(const unsigned char *buffer, rc_option &opt, bool recv){
+    static std::unordered_map<unsigned short, bool> identification;
     bool throw_ip, throw_port;
     throw_ip = throw_port = true;
     const iphdr *buffer_ip = reinterpret_cast<const iphdr *>(buffer + 6 + 6 + 2);
@@ -38,7 +39,16 @@ bool throw_away_the_packet(const unsigned char *buffer, rc_option &opt, bool rec
                 + (static_cast<unsigned short>(buffer_ip->ihl * 4)));
     unsigned int ip = true == recv ? buffer_ip->saddr : buffer_ip->daddr;
     unsigned short port = true == recv ? buffer_tcp->dest : buffer_tcp->source;
+    auto id_iter = identification.find(buffer_ip->id);
 
+    // 判断是否已经读取过这个数据包
+    // ***尚未完善，一段时间后要自动删除元素，不然后续循环使用曾被用过的标识时会出错
+    // ***而且这种判断方法，其实对于真的有分片的数据包并不管用，后续需要修改
+    if(id_iter != identification.end() && false == id_iter->second){
+        return true;
+    }
+
+    identification[buffer_ip->id] = (ntohs(buffer_ip->frag_off)&0x4) > 0 ? true : false;
     if(opt.ip.s_addr == 0 || (opt.ip.s_addr != 0 && opt.ip.s_addr == ip)){
         throw_ip = false;
     }

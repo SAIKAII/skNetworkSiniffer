@@ -1,7 +1,7 @@
 VPATH = layer:tool
 
 OBJECTS = main.o util.o sniffer_ip.o sniffer_tcp.o sniffer_udp.o
-G++ = g++ -o $@ -c $< -std=c++14
+G++ = g++ -g -o $@ -c $< -std=c++14
 
 sniffer: $(OBJECTS)
 	g++ -o sniffer $(OBJECTS)

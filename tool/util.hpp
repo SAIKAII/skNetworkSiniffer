@@ -9,6 +9,7 @@
 #include <netinet/udp.h>
 #include <netinet/if_ether.h>
 #include <map>
+#include <unordered_map>
 
 #include "../layer/sniffer_eth.hpp"
 #include "../layer/sniffer_ip.hpp"

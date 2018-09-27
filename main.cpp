@@ -84,6 +84,8 @@ void process_packet(unsigned char *buffer, int size){
     }
 
     prot_ptr->display_header();
+
+    delete prot_ptr;
     // ...
 }
 
@@ -110,7 +112,7 @@ int main(int argc, char *argv[]){
         exit(1);
     }
 
-    fd_set fd_read, fd_write;
+    fd_set fd_read;
     std::shared_ptr<unsigned char> buffer(new unsigned char[MAX_PACKET]);
     if(NULL == buffer){
         perror("std::shared_ptr error: ");
@@ -118,16 +120,13 @@ int main(int argc, char *argv[]){
     }
 
     FD_ZERO(&fd_read);
-    // FD_ZERO(&fd_write);
     int res;
     size_t size;
     while(1){
         res = -1;
         FD_SET(0, &fd_read);
         FD_SET(socketfd, &fd_read);
-        // FD_SET(socketfd, &fd_write);
 
-        // res = select(socketfd+1, &fd_read, &fd_write, NULL, NULL);
         res = select(socketfd+1, &fd_read, NULL, NULL, NULL);
         if(res < 0){
             close(socketfd);
@@ -147,14 +146,6 @@ int main(int argc, char *argv[]){
                     continue;
 
                 // 处理数据包
-                process_packet(buffer.get(), size);
-            }
-            if(FD_ISSET(socketfd, &fd_write)){
-                recv_packet(socketfd, buffer, size);
-
-                if(throw_away_the_packet(buffer.get(), opt, SNDPACKET))
-                    continue;
-
                 process_packet(buffer.get(), size);
             }
         }

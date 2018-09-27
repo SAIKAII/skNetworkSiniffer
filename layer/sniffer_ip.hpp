@@ -25,6 +25,7 @@ public:
     virtual unsigned short get_upper_level_protocol(){
         return static_cast<unsigned short>(iph->protocol);
     }
+    virtual ~SnifferIP(){}
 
 private:
     iphdr *iph;
