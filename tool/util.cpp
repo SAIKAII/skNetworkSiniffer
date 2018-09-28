@@ -1,6 +1,7 @@
 #include "util.hpp"
 
 std::map<unsigned short, std::string> kProtocol;
+std::unordered_map<unsigned short, repeated_filter> identification;
 
 void init(){
     kProtocol[1] = "ICMP";
@@ -8,6 +9,24 @@ void init(){
     kProtocol[4] = "IP";
     kProtocol[6] = "TCP";
     kProtocol[17] = "UDP";
+
+    // 该线程用于定时清理掉用于过滤数据包的记录
+    std::thread t([]{
+        std::vector<unsigned short> v;
+        while(true){
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            for(auto &it : identification){
+                if(it.second.mf == 0)
+                    it.second.mf = -1;
+                else if(it.second.mf == -1)
+                    v.push_back(it.first);
+            }
+            for(auto it : v){
+                identification.erase(it);
+            }
+            v.clear();
+        }
+    });
 }
 
 std::string mac_to_little_endian(const unsigned char (&v)[6]){
@@ -31,7 +50,8 @@ std::string switch_to_hex(const char c){
 }
 
 bool throw_away_the_packet(const unsigned char *buffer, rc_option &opt, bool recv){
-    static std::unordered_map<unsigned short, repeated_filter> identification;
+
+
     bool throw_ip, throw_port;
     throw_ip = throw_port = true;
     const iphdr *buffer_ip = reinterpret_cast<const iphdr *>(buffer + 6 + 6 + 2);
@@ -45,7 +65,6 @@ bool throw_away_the_packet(const unsigned char *buffer, rc_option &opt, bool rec
     rf.frag_off = buffer_ip->frag_off;  // 这里没有使用ntohs，以后要注意
 
     // 判断是否已经读取过这个数据包
-    // ***尚未完善，一段时间后要自动删除元素，不然后续循环使用曾被用过的标识时会出错
     if(id_iter != identification.end() && rf == id_iter->second){
         return true;
     }

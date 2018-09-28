@@ -10,6 +10,9 @@
 #include <netinet/if_ether.h>
 #include <map>
 #include <unordered_map>
+#include <thread>
+#include <chrono>
+#include <vector>
 
 #include "../layer/sniffer_eth.hpp"
 #include "../layer/sniffer_ip.hpp"
@@ -28,16 +31,17 @@ typedef struct rc_option{
 }rc_option;
 
 typedef struct repeated_filter{
-    bool mf;
+    unsigned char mf;
     unsigned short frag_off;
 
     bool operator==(const repeated_filter &rhs){
-        return (mf == rhs.mf) && (frag_off == rhs.frag_off);
+        return frag_off == rhs.frag_off;
     }
 }repeated_filter;
 
 const std::string kHex[16] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"};
 extern std::map<unsigned short, std::string> kProtocol;
+extern std::unordered_map<unsigned short, repeated_filter> identification;
 
 extern void init();
 extern std::string mac_to_little_endian(const unsigned char (&v)[6]);
