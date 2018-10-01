@@ -15,7 +15,7 @@ public:
     virtual unsigned short get_header_length(){
         return static_cast<unsigned short>(tcph->doff * 4);
     }
-    virtual ~SnifferTCP(){}
+    virtual ~SnifferTCP() = default;
 
 private:
     tcphdr *tcph;

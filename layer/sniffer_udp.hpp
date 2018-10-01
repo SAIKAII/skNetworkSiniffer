@@ -14,7 +14,7 @@ public:
     virtual unsigned short get_header_length(){
         return sizeof(udphdr);
     }
-    virtual ~SnifferUDP(){}
+    virtual ~SnifferUDP() = default;
 
 private:
     udphdr *udph;

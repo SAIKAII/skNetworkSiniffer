@@ -21,7 +21,8 @@ public:
     virtual unsigned short get_upper_level_protocol(){
         return ntohs(eth->h_proto);
     }
-    virtual ~SnifferEth(){}
+    virtual unsigned short get_header_length(){};
+    virtual ~SnifferEth() = default;
 
 private:
     ethhdr *eth;

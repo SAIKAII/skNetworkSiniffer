@@ -11,7 +11,7 @@ void init(){
     kProtocol[17] = "UDP";
 
     // 该线程用于定时清理掉用于过滤数据包的记录
-    std::thread t([]{
+    static std::thread t([]{
         std::vector<unsigned short> v;
         while(true){
             std::this_thread::sleep_for(std::chrono::seconds(2));
