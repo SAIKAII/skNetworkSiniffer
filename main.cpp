@@ -46,8 +46,11 @@ void resolve_option(int num, auto option /*char *option[] */, rc_option &opt){
 }
 
 bool exec_cmd(char *buffer, int len){
-    if(strncmp(buffer, "quit", 4) == 0)
+    if(strncmp(buffer, "quit", 4) == 0){
+        // 其实感觉这里关不关线程都可以，毕竟主线程都要关了
+        thread_loop = false;
         return true;
+    }
     return false;
 }
 

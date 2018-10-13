@@ -2,6 +2,7 @@
 
 std::map<unsigned short, std::string> kProtocol;
 std::unordered_map<unsigned short, repeated_filter> identification;
+bool thread_loop = true;
 
 void init(){
     kProtocol[1] = "ICMP";
@@ -13,7 +14,7 @@ void init(){
     // 该线程用于定时清理掉用于过滤数据包的记录
     static std::thread t([]{
         std::vector<unsigned short> v;
-        while(true){
+        while(thread_loop){
             std::this_thread::sleep_for(std::chrono::seconds(2));
             for(auto &it : identification){
                 if(it.second.mf == 0)
