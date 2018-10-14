@@ -10,7 +10,7 @@ public:
     SnifferUDP(unsigned char *buffer) : SnifferIP(buffer){
         udph = reinterpret_cast<udphdr *>(buffer + sizeof(ethhdr) + SnifferIP::get_header_length());
     }
-    virtual void display_header();
+    virtual void display_header(std::ostream &out);
     virtual unsigned short get_header_length(){
         return sizeof(udphdr);
     }

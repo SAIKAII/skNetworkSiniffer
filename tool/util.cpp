@@ -50,16 +50,12 @@ std::string switch_to_hex(const char c){
     return std::string(kHex[front]) + std::string(kHex[behind]);
 }
 
-bool throw_away_the_packet(const unsigned char *buffer, rc_option &opt, bool recv){
-
-
+bool throw_away_the_packet(const unsigned char *buffer, rc_option &opt){
     bool throw_ip, throw_port;
     throw_ip = throw_port = true;
     const iphdr *buffer_ip = reinterpret_cast<const iphdr *>(buffer + 6 + 6 + 2);
     const tcphdr *buffer_tcp = reinterpret_cast<const tcphdr *>(buffer + 6 + 6 + 2
                 + (static_cast<unsigned short>(buffer_ip->ihl * 4)));
-    unsigned int ip = true == recv ? buffer_ip->saddr : buffer_ip->daddr;
-    unsigned short port = true == recv ? buffer_tcp->dest : buffer_tcp->source;
     auto id_iter = identification.find(buffer_ip->id);
     repeated_filter rf;
     rf.mf = ntohs(buffer_ip->frag_off)&0x4;
@@ -71,10 +67,10 @@ bool throw_away_the_packet(const unsigned char *buffer, rc_option &opt, bool rec
     }
 
     identification[buffer_ip->id] = rf;
-    if(opt.ip.s_addr == 0 || (opt.ip.s_addr != 0 && opt.ip.s_addr == ip)){
+    if(opt.ip.s_addr == 0 || (opt.ip.s_addr != 0 && (opt.ip.s_addr == buffer_ip->saddr || opt.ip.s_addr == buffer_ip->daddr))){
         throw_ip = false;
     }
-    if(opt.port == 0 || (opt.port != 0 && opt.port == port)){
+    if(opt.port == 0 || (opt.port != 0 && (opt.port == buffer_tcp->source || opt.port == buffer_tcp->dest))){
         throw_port = false;
     }
     return (throw_ip || throw_port);

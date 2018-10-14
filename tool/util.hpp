@@ -46,7 +46,7 @@ extern std::unordered_map<unsigned short, repeated_filter> identification;
 
 extern void init();
 extern std::string mac_to_little_endian(const unsigned char (&v)[6]);
-extern bool throw_away_the_packet(const unsigned char *buffer, rc_option &opt, bool recv);
+extern bool throw_away_the_packet(const unsigned char *buffer, rc_option &opt);
 extern std::string switch_to_hex(const char c);
 extern SnifferEth *judge_protocol_and_return_obj(unsigned char *buffer);
 

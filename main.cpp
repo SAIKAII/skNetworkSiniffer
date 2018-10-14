@@ -10,6 +10,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <cstdlib>
+#include <fstream>
 
 #include "tool/util.hpp"
 #include "layer/sniffer_ip.hpp"
@@ -19,8 +20,7 @@
 
 #define MAX_PACKET 65536
 
-#define RECVPACKET true
-#define SNDPACKET false
+static bool open_log = false;
 
 // 显示可用参数
 void show_option(){
@@ -40,6 +40,9 @@ void resolve_option(int num, auto option /*char *option[] */, rc_option &opt){
                 ++i;
                 port = static_cast<unsigned short>(atoi(option[i]));
                 opt.port = htons(port);
+                break;
+            case 'l':
+                open_log = true;
                 break;
         }
     }
@@ -86,7 +89,13 @@ void process_packet(unsigned char *buffer, int size){
         return;
     }
 
-    prot_ptr->display_header();
+    prot_ptr->display_header(std::cout);
+    // 写到log文件
+    if(open_log){
+        std::ofstream os("./log_file.dat", std::ofstream::out | std::ofstream::app | std::ofstream::ate);
+        prot_ptr->display_header(os);
+        os.close();
+    }
 
     delete prot_ptr;
     // ...
@@ -145,7 +154,7 @@ int main(int argc, char *argv[]){
             if(FD_ISSET(socketfd, &fd_read)){
                 recv_packet(socketfd, buffer, size);
 
-                if(throw_away_the_packet(buffer.get(), opt, RECVPACKET))
+                if(throw_away_the_packet(buffer.get(), opt))
                     continue;
 
                 // 处理数据包

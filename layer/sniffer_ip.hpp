@@ -18,7 +18,7 @@ public:
     SnifferIP(unsigned char *buffer) : SnifferEth(buffer){
         iph = reinterpret_cast<iphdr *>(buffer + sizeof(ethhdr));
     }
-    virtual void display_header();
+    virtual void display_header(std::ostream &out);
     virtual unsigned short get_header_length(){
         return static_cast<unsigned short>(iph->ihl * 4);
     }

@@ -11,7 +11,7 @@ public:
     SnifferTCP(unsigned char *buffer) : SnifferIP(buffer){
         tcph = reinterpret_cast<tcphdr*>(buffer + sizeof(ethhdr) + SnifferIP::get_header_length());
     }
-    virtual void display_header();
+    virtual void display_header(std::ostream &out);
     virtual unsigned short get_header_length(){
         return static_cast<unsigned short>(tcph->doff * 4);
     }
