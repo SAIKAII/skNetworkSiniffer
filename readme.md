@@ -9,4 +9,5 @@ make clean
 ```
 
 ## TODO
-- [ ] log file
+- [x] log file
+- [ ] option "-n url"
