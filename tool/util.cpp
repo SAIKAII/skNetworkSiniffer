@@ -1,7 +1,6 @@
 #include "util.hpp"
 
 std::map<unsigned short, std::string> kProtocol;
-std::unordered_map<unsigned short, repeated_filter> identification;
 bool thread_loop = true;
 
 void init(){
@@ -10,24 +9,6 @@ void init(){
     kProtocol[4] = "IP";
     kProtocol[6] = "TCP";
     kProtocol[17] = "UDP";
-
-    // 该线程用于定时清理掉用于过滤数据包的记录
-    static std::thread t([]{
-        std::vector<unsigned short> v;
-        while(thread_loop){
-            std::this_thread::sleep_for(std::chrono::seconds(2));
-            for(auto &it : identification){
-                if(it.second.mf == 0)
-                    it.second.mf = -1;
-                else if(it.second.mf == -1)
-                    v.push_back(it.first);
-            }
-            for(auto it : v){
-                identification.erase(it);
-            }
-            v.clear();
-        }
-    });
 }
 
 std::string mac_to_little_endian(const unsigned char (&v)[6]){
@@ -56,17 +37,7 @@ bool throw_away_the_packet(const unsigned char *buffer, rc_option &opt){
     const iphdr *buffer_ip = reinterpret_cast<const iphdr *>(buffer + 6 + 6 + 2);
     const tcphdr *buffer_tcp = reinterpret_cast<const tcphdr *>(buffer + 6 + 6 + 2
                 + (static_cast<unsigned short>(buffer_ip->ihl * 4)));
-    auto id_iter = identification.find(buffer_ip->id);
-    repeated_filter rf;
-    rf.mf = ntohs(buffer_ip->frag_off)&0x4;
-    rf.frag_off = buffer_ip->frag_off;  // 这里没有使用ntohs，以后要注意
 
-    // 判断是否已经读取过这个数据包
-    if(id_iter != identification.end() && rf == id_iter->second){
-        return true;
-    }
-
-    identification[buffer_ip->id] = rf;
     if(opt.ip.s_addr == 0 || (opt.ip.s_addr != 0 && (opt.ip.s_addr == buffer_ip->saddr || opt.ip.s_addr == buffer_ip->daddr))){
         throw_ip = false;
     }

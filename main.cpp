@@ -18,7 +18,7 @@
 #include "layer/sniffer_eth.hpp"
 #include "layer/sniffer_udp.hpp"
 
-#define MAX_PACKET 65536
+#define MAX_PACKET 65535
 
 static bool open_log = false;
 
@@ -90,10 +90,12 @@ void process_packet(unsigned char *buffer, int size){
     }
 
     prot_ptr->display_header(std::cout);
+    std::cout << std::endl;
     // 写到log文件
     if(open_log){
         std::ofstream os("./log_file.dat", std::ofstream::out | std::ofstream::app | std::ofstream::ate);
         prot_ptr->display_header(os);
+        os << std::endl;
         os.close();
     }
 
@@ -112,17 +114,15 @@ int main(int argc, char *argv[]){
     init();
 
     rc_option opt;
-    memset((void *)&opt, 0, sizeof(rc_option));
-    resolve_option(argc-1, &argv[1], opt);
-
     int socketfd;
-
     // 接收发往本机mac的所有类型ip arp rarp的数据帧，接收从本机发出的所有类型的数据帧。
     socketfd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if(socketfd < 0){
         perror("socket failed: ");
         exit(1);
     }
+    memset((void *)&opt, 0, sizeof(rc_option));
+    resolve_option(argc-1, &argv[1], opt);
 
     fd_set fd_read;
     std::shared_ptr<unsigned char> buffer(new unsigned char[MAX_PACKET]);

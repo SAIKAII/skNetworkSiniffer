@@ -42,7 +42,6 @@ typedef struct repeated_filter{
 const std::string kHex[16] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"};
 extern bool thread_loop;
 extern std::map<unsigned short, std::string> kProtocol;
-extern std::unordered_map<unsigned short, repeated_filter> identification;
 
 extern void init();
 extern std::string mac_to_little_endian(const unsigned char (&v)[6]);

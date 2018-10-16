@@ -10,4 +10,5 @@ make clean
 
 ## TODO
 - [x] log file
-- [ ] option "-n url"
+- [ ] use hostname replace ip address
+- [ ] recombine fragment
