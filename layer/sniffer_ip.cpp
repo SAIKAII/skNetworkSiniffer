@@ -2,10 +2,11 @@
 
 void SnifferIP::display_header(std::ostream &out){
     SnifferEth::display_header(out);
+    short frag = (ntohs(iph->frag_off)&0xe000)>>13;
     out << "----------IP : " << std::endl;
     out << "header length : " << (iph->ihl)*4;
-    out << "\ttotol length : " << (iph->tot_len)*4;
-    out << "\tflags : [" << kFlags[ntohs(iph->frag_off)&0x7] << "]";
+    out << "\ttotol length : " << iph->tot_len;
+    out << "\tflags : [" << kFlags[frag] << "]";    // &0xe000 || &0xe
     out << "\tTTL : " << static_cast<unsigned short>(iph->ttl);
     unsigned short prot = static_cast<unsigned short>(iph->protocol);
     out << "\tprotocol : " << kProtocol[prot] << std::endl;

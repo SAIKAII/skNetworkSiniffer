@@ -11,7 +11,7 @@
 #include "sniffer_eth.hpp"
 
 extern std::map<unsigned short, std::string> kProtocol;
-const static std::string kFlags[5] = {" ", " ", "DF", " ", "MF"};
+const static std::string kFlags[7] = {" ", " ", "DF", " ", "MF", " ", " "};
 
 class SnifferIP : public SnifferEth{
 public:

@@ -30,17 +30,7 @@ typedef struct rc_option{
     unsigned short port;  //htons之后的端口号
 }rc_option;
 
-typedef struct repeated_filter{
-    unsigned char mf;
-    unsigned short frag_off;
-
-    bool operator==(const repeated_filter &rhs){
-        return frag_off == rhs.frag_off;
-    }
-}repeated_filter;
-
 const std::string kHex[16] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"};
-extern bool thread_loop;
 extern std::map<unsigned short, std::string> kProtocol;
 
 extern void init();

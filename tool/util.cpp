@@ -1,7 +1,6 @@
 #include "util.hpp"
 
 std::map<unsigned short, std::string> kProtocol;
-bool thread_loop = true;
 
 void init(){
     kProtocol[1] = "ICMP";
