@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <cstdlib>
 #include <fstream>
+#include <netdb.h>
 
 #include "tool/util.hpp"
 #include "layer/sniffer_ip.hpp"
@@ -24,7 +25,17 @@ static bool open_log = false;
 
 // 显示可用参数
 void show_option(){
-    std::cout << "USAGE : sniffer -p(port_number) [-i(ip_address) -l(any char)]" << std::endl;
+    std::cout << "USAGE : sniffer -p(port_number) [-i(ip_address) -l(any char) -h(url)]" << std::endl;
+}
+
+// 名字、地址转换
+void hostname_to_addr(char *name, rc_option &opt){
+    hostent *hptr = gethostbyname(name);
+    if(nullptr == hptr){
+        perror("gethostname(): ");
+        exit(1);
+    }
+    opt.ip = *((in_addr*)(*(hptr->h_addr_list)));
 }
 
 // 解析参数
@@ -43,6 +54,10 @@ void resolve_option(int num, auto option /*char *option[] */, rc_option &opt){
                 break;
             case 'l':
                 open_log = true;
+                break;
+            case 'h':
+                ++i;
+                hostname_to_addr(option[i], opt);
                 break;
         }
     }
