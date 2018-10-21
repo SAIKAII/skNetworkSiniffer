@@ -18,6 +18,7 @@
 #include "layer/sniffer_tcp.hpp"
 #include "layer/sniffer_eth.hpp"
 #include "layer/sniffer_udp.hpp"
+#include "layer/sniffer_icmp.hpp"
 
 #define MAX_PACKET 65535
 

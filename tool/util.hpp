@@ -18,6 +18,7 @@
 #include "../layer/sniffer_ip.hpp"
 #include "../layer/sniffer_tcp.hpp"
 #include "../layer/sniffer_udp.hpp"
+#include "../layer/sniffer_icmp.hpp"
 
 #define ICMP 1
 #define IGMP 2

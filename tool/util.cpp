@@ -68,6 +68,9 @@ SnifferEth *judge_protocol_and_return_obj(unsigned char *buffer){
         case UDP:
             polymorphism = new SnifferUDP(buffer);
             break;
+        case ICMP:
+            polymorphism = new SnifferICMP(buffer);
+            break;
         default:
             polymorphism = new SnifferIP(buffer);
     }
