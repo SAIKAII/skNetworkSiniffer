@@ -141,11 +141,6 @@ int main(int argc, char *argv[]){
     });
 
     fd_set fd_read;
-    //std::shared_ptr<unsigned char> buffer(new unsigned char[MAX_PACKET]);
-    // if(NULL == buffer){
-    //     perror("std::shared_ptr error: ");
-    //     exit(1);
-    // }
 
     FD_ZERO(&fd_read);
     int res;
