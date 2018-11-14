@@ -4,13 +4,11 @@
 #include <iostream>
 #include <errno.h>
 #include <signal.h>
-#include <memory>
 #include <linux/if_ether.h> // 为了socket第三个参数的ETH_P_ALL
 #include <sys/types.h>
 #include <string.h>
 #include <unistd.h>
 #include <cstdlib>
-#include <fstream>
 #include <netdb.h>
 
 #include "tool/util.hpp"
@@ -20,9 +18,9 @@
 #include "layer/sniffer_udp.hpp"
 #include "layer/sniffer_icmp.hpp"
 
-#define MAX_PACKET 65535
-
-static bool open_log = false;
+sem_t buffer_empty_sem;
+sem_t buffer_full_sem;
+bool run = true;
 
 // 显示可用参数
 void show_option(){
@@ -66,6 +64,7 @@ void resolve_option(int num, auto option /*char *option[] */, rc_option &opt){
 
 bool exec_cmd(char *buffer, int len){
     if(strncmp(buffer, "quit", 4) == 0){
+        run = false;
         return true;
     }
     return false;
@@ -83,9 +82,9 @@ bool command_interpreter(const int &socketfd){
     return false;
 }
 
-void recv_packet(const int &socketfd, auto &buffer, size_t &size){
+void recv_packet(const int &socketfd, std::shared_ptr<rc_buffer> pack_buffer, size_t &size, int &tail_index){
     int recv_size;
-    recv_size = recvfrom(socketfd, buffer.get(), MAX_PACKET, 0, 0, 0);
+    recv_size = recvfrom(socketfd, (pack_buffer.get() + tail_index)->buffer, MAX_PACKET, 0, 0, 0);
 
     if(recv_size <= 0){
         close(socketfd);
@@ -93,28 +92,7 @@ void recv_packet(const int &socketfd, auto &buffer, size_t &size){
         exit(1);
     }
     size = recv_size;
-}
-
-void process_packet(unsigned char *buffer, int size){
-    SnifferEth *prot_ptr = judge_protocol_and_return_obj(buffer);
-
-    if(nullptr == prot_ptr){
-        std::cout << "wrong datagram!" << std::endl;
-        return;
-    }
-
-    prot_ptr->display_header(std::cout);
-    std::cout << std::endl;
-    // 写到log文件
-    if(open_log){
-        std::ofstream os("./log_file.dat", std::ofstream::out | std::ofstream::app | std::ofstream::ate);
-        prot_ptr->display_header(os);
-        os << std::endl;
-        os.close();
-    }
-
-    delete prot_ptr;
-    // ...
+    ++tail_index;
 }
 
 int main(int argc, char *argv[]){
@@ -138,16 +116,39 @@ int main(int argc, char *argv[]){
     memset((void *)&opt, 0, sizeof(rc_option));
     resolve_option(argc-1, &argv[1], opt);
 
-    fd_set fd_read;
-    std::shared_ptr<unsigned char> buffer(new unsigned char[MAX_PACKET]);
-    if(NULL == buffer){
-        perror("std::shared_ptr error: ");
+    std::shared_ptr<rc_buffer> pack_buffer(new(std::nothrow) rc_buffer[MAX_BUFFER]); // 用了nothrow才是失败返回nullptr
+    if(nullptr == pack_buffer){
+        perror("buffer new error: ");
         exit(1);
     }
 
+
+    sem_init(&buffer_empty_sem, 0, 10);
+    sem_init(&buffer_full_sem, 0, 0);
+
+    int head_index = 0;
+    int tail_index = 0;
+    size_t size;
+
+    std::thread t([pack_buffer, &head_index, &size](){
+        while(run){
+            sem_wait(&buffer_full_sem);
+            process_packet(pack_buffer, size, head_index);
+            if(head_index >= MAX_BUFFER)
+                head_index = 0;
+            sem_post(&buffer_empty_sem);
+        }
+    });
+
+    fd_set fd_read;
+    //std::shared_ptr<unsigned char> buffer(new unsigned char[MAX_PACKET]);
+    // if(NULL == buffer){
+    //     perror("std::shared_ptr error: ");
+    //     exit(1);
+    // }
+
     FD_ZERO(&fd_read);
     int res;
-    size_t size;
     while(1){
         res = -1;
         FD_SET(0, &fd_read);
@@ -166,17 +167,23 @@ int main(int argc, char *argv[]){
                     break;
             }
             if(FD_ISSET(socketfd, &fd_read)){
-                recv_packet(socketfd, buffer, size);
+                sem_wait(&buffer_empty_sem);
+                recv_packet(socketfd, pack_buffer, size, tail_index);
 
-                if(throw_away_the_packet(buffer.get(), opt))
+                if(throw_away_the_packet(pack_buffer, opt, tail_index - 1)){
+                    sem_post(&buffer_empty_sem);
+                    --tail_index;
                     continue;
+                }
 
-                // 处理数据包
-                process_packet(buffer.get(), size);
+                if(tail_index >= MAX_BUFFER)
+                    tail_index = 0;
+                sem_post(&buffer_full_sem);
             }
         }
     }
 
+    t.join();
     close(socketfd);
     return 0;
 }

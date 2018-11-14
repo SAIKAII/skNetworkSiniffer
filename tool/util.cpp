@@ -1,6 +1,7 @@
 #include "util.hpp"
 
 std::map<unsigned short, std::string> kProtocol;
+bool open_log = false;
 
 void init(){
     kProtocol[1] = "ICMP";
@@ -30,11 +31,12 @@ std::string switch_to_hex(const char c){
     return std::string(kHex[front]) + std::string(kHex[behind]);
 }
 
-bool throw_away_the_packet(const unsigned char *buffer, rc_option &opt){
+bool throw_away_the_packet(const std::shared_ptr<rc_buffer> buffer, rc_option &opt, int tail_index){
     bool throw_ip, throw_port;
     throw_ip = throw_port = true;
-    const iphdr *buffer_ip = reinterpret_cast<const iphdr *>(buffer + 6 + 6 + 2);
-    const tcphdr *buffer_tcp = reinterpret_cast<const tcphdr *>(buffer + 6 + 6 + 2
+    unsigned char *pack_buffer = (buffer.get() + tail_index)->buffer;
+    const iphdr *buffer_ip = reinterpret_cast<const iphdr *>(pack_buffer + 6 + 6 + 2);
+    const tcphdr *buffer_tcp = reinterpret_cast<const tcphdr *>(pack_buffer + 6 + 6 + 2
                 + (static_cast<unsigned short>(buffer_ip->ihl * 4)));
 
     if(opt.ip.s_addr == 0 || (opt.ip.s_addr != 0 && (opt.ip.s_addr == buffer_ip->saddr || opt.ip.s_addr == buffer_ip->daddr))){
@@ -76,4 +78,27 @@ SnifferEth *judge_protocol_and_return_obj(unsigned char *buffer){
     }
 
     return polymorphism;
+}
+
+void process_packet(std::shared_ptr<rc_buffer> buffer, int size, int &head_index){
+    SnifferEth *prot_ptr = judge_protocol_and_return_obj((buffer.get() + head_index)->buffer);
+
+    if(nullptr == prot_ptr){
+        std::cout << "wrong datagram!" << std::endl;
+        return;
+    }
+
+    prot_ptr->display_header(std::cout);
+    std::cout << std::endl;
+    // 写到log文件
+    if(open_log){
+        std::ofstream os("./log_file.dat", std::ofstream::out | std::ofstream::app | std::ofstream::ate);
+        prot_ptr->display_header(os);
+        os << std::endl;
+        os.close();
+    }
+
+    delete prot_ptr;
+    ++head_index;
+    // ...
 }
